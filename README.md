@@ -59,7 +59,7 @@ optional arguments:
                         (default: all)
   -Z, --nozip           Do not compress output
   -s SCALE, --scale SCALE
-                        Scale page size (default: 0.5)
+                        Scale page size (default: 1.0)
   -x X                  Specify the x coordinate of the viewport of <svg>
                         (default: 10.0)
   -y Y                  Specify the y coordinate of the viewport of <svg>
