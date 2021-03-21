@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
 
 setuptools.setup(
     name='pdftowrite',
-    version='2021.03.16',
+    version='2021.03.21',
     author='Космическое П.',
     author_email='kosmospredanie@yandex.ru',
     description='PDF to Write document converter',
