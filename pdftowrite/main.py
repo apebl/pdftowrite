@@ -90,9 +90,9 @@ def arg_parser():
                         help='Specify render mode (default: poppler)')
     parser.add_argument('-d', '--dpi', type=int, default=96,
                         help='Specify resolution for bitmaps and rasterized filters (default: 96)')
-    parser.add_argument('-g', '--pages', action='store', type=str, default='',
+    parser.add_argument('-g', '--pages', action='store', type=str, default='all',
                         help='Specify pages to convert (e.g. "1 2 3", "1-3") (default: all)')
-    parser.add_argument('-u', '--nodup-pages', action='store', type=str, default='',
+    parser.add_argument('-u', '--nodup-pages', action='store', type=str, default='all',
                         help='Specify no-dup pages (e.g. "1 2 3", "1-3") (default: all)')
     parser.add_argument('-Z', '--nozip', action='store_true',
                         help='Do not compress output')

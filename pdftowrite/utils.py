@@ -42,7 +42,8 @@ def number_of_pages(filename: str) -> int:
 
 def parse_range(text: str, num_pages: int) -> set[int]:
     tokens: list[str] = text.split()
-    if not tokens: return {p for p in range(1, num_pages+1)}
+    if not tokens: return set()
+    if len(tokens) == 1 and tokens[0] == 'all': return {p for p in range(1, num_pages+1)}
     pages: set[int] = set()
     for token in tokens:
         match = re.search(r'^(\d+)-(\d+)$', token)
