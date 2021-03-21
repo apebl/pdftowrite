@@ -114,8 +114,9 @@ def arg_parser():
 
 def process_page(filename: str, page_num: int, output_dir: str, ns: argparse.Namespace) -> Page:
     output = str(Path(output_dir) / f'output-{page_num}.svg')
+    opts = ['--pdf-poppler'] if ns.mode == 'poppler' else []
     utils.inkscape_run([
-        '--pdf-poppler' if ns.mode == 'poppler' else '',
+        *opts,
         f'--pdf-page={page_num}',
         f'--export-dpi={ns.dpi}',
         '--export-plain-svg',
