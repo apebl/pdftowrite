@@ -92,6 +92,8 @@ def arg_parser():
                         help='Specify resolution for bitmaps and rasterized filters (default: 96)')
     parser.add_argument('-g', '--pages', action='store', type=str, default='',
                         help='Specify pages to convert (e.g. "1 2 3", "1-3") (default: all)')
+    parser.add_argument('-u', '--nodup-pages', action='store', type=str, default='',
+                        help='Specify no-dup pages (e.g. "1 2 3", "1-3") (default: all)')
     parser.add_argument('-Z', '--nozip', action='store_true',
                         help='Do not compress output')
     parser.add_argument('-s', '--scale', action='store', type=float, default=1.0,
@@ -140,7 +142,7 @@ async def convert_to_pages(filename: str, page_nums: list[int], ns: argparse.Nam
             result.append(page)
     return sorted(result, key=operator.attrgetter('page_num'))
 
-def generate_document(pages: list[Page], vars: dict[str,str], ns: argparse.Namespace) -> None:
+def generate_document(pages: list[Page], nodup_pages: set[int], vars: dict[str,str], ns: argparse.Namespace) -> None:
     page_tmp = get_page_template()
     page_results = []
     for page in pages:
@@ -148,6 +150,7 @@ def generate_document(pages: list[Page], vars: dict[str,str], ns: argparse.Names
         page.height = page.height * ns.scale
         vars['width'] = page.width
         vars['height'] = page.height
+        vars['ruleline-classes'] = '' if page.page_num in nodup_pages else 'write-no-dup'
         vars['body'] = page.svg
         text = utils.apply_vars(page_tmp, vars)
         page_results.append(text)
@@ -175,6 +178,7 @@ def run(args):
         'margin-left': ns.margin_left,
         'papercolor': ns.papercolor,
         'rulecolor': ns.rulecolor,
+        'ruleline-classes': '',
         'body': ''
     }
 
@@ -182,13 +186,14 @@ def run(args):
         raise FileNotFoundError('File not found: {}'.format(filename))
 
     num_pages = utils.number_of_pages(filename)
-    page_nums = utils.parse_range(ns.pages, num_pages)
+    page_nums = sorted( utils.parse_range(ns.pages, num_pages) )
+    nodup_page_nums = utils.parse_range(ns.nodup_pages, num_pages)
 
     loop = asyncio.get_event_loop()
     pages = loop.run_until_complete( convert_to_pages(filename, page_nums, ns) )
     loop.close()
 
-    doc = generate_document(pages, vars, ns)
+    doc = generate_document(pages, nodup_page_nums, vars, ns)
     doc = prettify(doc)
 
     suffix = '.svg' if ns.nozip else '.svgz'

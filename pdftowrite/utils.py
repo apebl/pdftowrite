@@ -40,9 +40,9 @@ def number_of_pages(filename: str) -> int:
     match = re.search(r'^\s*Pages:\s*(\d+)', res, flags=re.MULTILINE)
     return int(match.group(1))
 
-def parse_range(text: str, num_pages: int) -> list[int]:
+def parse_range(text: str, num_pages: int) -> set[int]:
     tokens: list[str] = text.split()
-    if not tokens: return [p for p in range(1, num_pages+1)]
+    if not tokens: return {p for p in range(1, num_pages+1)}
     pages: set[int] = set()
     for token in tokens:
         match = re.search(r'^(\d+)-(\d+)$', token)
@@ -57,4 +57,4 @@ def parse_range(text: str, num_pages: int) -> list[int]:
             pages.add(p)
             continue
         raise ValueError(f'Invalid page range: {text}')
-    return sorted(pages)
+    return pages
