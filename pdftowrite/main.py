@@ -94,8 +94,8 @@ def arg_parser():
                         help='Specify pages to convert (e.g. "1 2 3", "1-3") (default: all)')
     parser.add_argument('-Z', '--nozip', action='store_true',
                         help='Do not compress output')
-    parser.add_argument('-s', '--scale', action='store', type=float, default=0.5,
-                        help='Scale page size (default: 0.5)')
+    parser.add_argument('-s', '--scale', action='store', type=float, default=1.0,
+                        help='Scale page size (default: 1.0)')
     parser.add_argument('-x', action='store', type=float, default=10.0,
                         help='Specify the x coordinate of the viewport of <svg> (default: 10.0)')
     parser.add_argument('-y', action='store', type=float, default=10.0,
