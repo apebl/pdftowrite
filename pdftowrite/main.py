@@ -6,6 +6,7 @@ import pdftowrite.utils as utils
 import xml.etree.ElementTree as ET
 import xml.dom.minidom as minidom
 import shortuuid
+from pdftowrite import __version__
 
 PACKAGE_DIR = Path(os.path.dirname(__file__))
 DATA_DIR = PACKAGE_DIR / 'data'
@@ -84,6 +85,7 @@ def arg_parser():
     parser = argparse.ArgumentParser(description='Convert PDF to Stylus Labs Write document')
     parser.add_argument('file', metavar='FILE', type=str, nargs=1,
                         help='A pdf file')
+    parser.add_argument('-v', '--version', action='version', version=__version__)
     parser.add_argument('-o', '--output', action='store', type=str, default='',
                         help='Specify output filename')
     parser.add_argument('-m', '--mode', default='poppler', choices=['poppler', 'inkscape'],

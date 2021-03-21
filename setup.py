@@ -1,11 +1,19 @@
-import setuptools
+import setuptools, re, os.path
+
+def get_property(prop, package):
+    dir = os.path.abspath( os.path.dirname(__file__) )
+    path = os.path.join(dir, package, '__init__.py')
+    with open(path, 'r') as f:
+        code = f.read()
+        match = re.search(r'{}\s*=\s*[\'"]([^\'"]*)[\'"]'.format(prop), code)
+        return match.group(1)
 
 with open('README.md', 'r') as f:
     long_description = f.read()
 
 setuptools.setup(
     name='pdftowrite',
-    version='2021.03.21',
+    version=get_property('__version__', 'pdftowrite'),
     author='Космическое П.',
     author_email='kosmospredanie@yandex.ru',
     description='PDF to Write document converter',
