@@ -36,9 +36,10 @@ pdftowrite example.pdf
 ## Usage
 
 ```
-usage: pdftowrite [-h] [-o OUTPUT] [-m {poppler,inkscape}] [-d DPI] [-g PAGES]
-                  [-Z] [-s SCALE] [-x X] [-y Y] [-X XRULING] [-Y YRULING]
-                  [-l MARGIN_LEFT] [-p PAPERCOLOR] [-r RULECOLOR]
+usage: pdftowrite [-h] [-v] [-o OUTPUT] [-m {poppler,inkscape}] [-d DPI]
+                  [-g PAGES] [-u NODUP_PAGES] [-Z] [-s SCALE] [-x X] [-y Y]
+                  [-X XRULING] [-Y YRULING] [-l MARGIN_LEFT] [-p PAPERCOLOR]
+                  [-r RULECOLOR]
                   FILE
 
 Convert PDF to Stylus Labs Write document
@@ -48,6 +49,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
   -o OUTPUT, --output OUTPUT
                         Specify output filename
   -m {poppler,inkscape}, --mode {poppler,inkscape}
@@ -57,6 +59,9 @@ optional arguments:
   -g PAGES, --pages PAGES
                         Specify pages to convert (e.g. "1 2 3", "1-3")
                         (default: all)
+  -u NODUP_PAGES, --nodup-pages NODUP_PAGES
+                        Specify no-dup pages (e.g. "1 2 3", "1-3") (default:
+                        all)
   -Z, --nozip           Do not compress output
   -s SCALE, --scale SCALE
                         Scale page size (default: 1.0)
