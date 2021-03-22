@@ -1,4 +1,4 @@
-__version__ = '2021.03.21'
+__version__ = '2021.03.22'
 
 import sys
 from pdftowrite.main import run
