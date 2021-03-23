@@ -155,6 +155,16 @@ class Page:
         self.tree.getroot().set('height', newval)
 
     @property
+    def width_unit(self) -> str:
+        val = self.tree.getroot().get('width')
+        return utils.pattern_get(r'([0-9.]+)(.*?)$', val, 2)
+
+    @property
+    def height_unit(self) -> str:
+        val = self.tree.getroot().get('height')
+        return utils.pattern_get(r'([0-9.]+)(.*?)$', val, 2)
+
+    @property
     def viewbox_width(self) -> str:
         val = self.tree.getroot().get('viewBox')
         return self.__viewbox_get(val, 3)
@@ -275,8 +285,8 @@ def generate_document(pages: list[Page], nodup_pages: set[int], vars: dict[str,s
     for page in pages:
         page.width = page.width * ns.scale
         page.height = page.height * ns.scale
-        vars['width'] = page.width
-        vars['height'] = page.height
+        vars['width'] = str(page.width) + page.width_unit
+        vars['height'] = str(page.height) + page.height_unit
         vars['ruleline-classes'] = '' if page.page_num in nodup_pages else 'write-no-dup'
         vars['body'] = page.svg
         text = utils.apply_vars(page_tmp, vars)
@@ -298,8 +308,8 @@ def run(args):
     vars = {
         'x': ns.x,
         'y': ns.y,
-        'width': 0,
-        'height': 0,
+        'width': '0',
+        'height': '0',
         'xruling': ns.xruling,
         'yruling': ns.yruling,
         'margin-left': ns.margin_left,
