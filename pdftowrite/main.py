@@ -77,8 +77,6 @@ class Page:
 
     def __create_text_group(self, tree) -> ET.Element:
         group = ET.Element('g')
-        group.set('opacity', '0')
-
         g = tree.getroot().find('./{%s}g[last()]' % self.SVG_NS)
         if 'transform' in g.attrib:
             group.set('transform', g.get('transform'))
