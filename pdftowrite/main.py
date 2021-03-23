@@ -2,6 +2,7 @@ import os, tempfile, subprocess, shutil
 import argparse, re, asyncio, operator, contextlib
 from pathlib import Path
 from typing import Any
+from enum import Enum
 import pdftowrite.utils as utils
 import xml.etree.ElementTree as ET
 import xml.dom.minidom as minidom
@@ -149,6 +150,14 @@ class Page:
         num = r'([0-9.]+\s*[a-zA-Z]*)'
         return utils.pattern_get(rf'{num}\s+{num}\s+{num}\s+{num}', viewbox, get)
 
+class Mode(Enum):
+    MIXED = 'mixed'
+    POPPLER = 'poppler'
+    INKSCAPE = 'inkscape'
+
+    def __str__(self):
+        return self.value
+
 def get_doc_template() -> str:
     global DOC_TEMPLATE
     if not DOC_TEMPLATE:
@@ -172,7 +181,7 @@ def arg_parser():
     parser.add_argument('-v', '--version', action='version', version=__version__)
     parser.add_argument('-o', '--output', action='store', type=str, default='',
                         help='Specify output filename')
-    parser.add_argument('-m', '--mode', default='poppler', choices=['mixed', 'poppler', 'inkscape'],
+    parser.add_argument('-m', '--mode', type=Mode, default=Mode.POPPLER, choices=list(Mode),
                         help='Specify render mode (default: poppler)')
     parser.add_argument('-d', '--dpi', type=int, default=96,
                         help='Specify resolution for bitmaps and rasterized filters (default: 96)')
@@ -202,7 +211,7 @@ def arg_parser():
 
 def process_page(filename: str, page_num: int, output_dir: str, ns: argparse.Namespace) -> Page:
     output = str(Path(output_dir) / f'output-{page_num}.svg')
-    opts = ['--pdf-poppler'] if ns.mode == 'poppler' or ns.mode == 'mixed' else []
+    opts = ['--pdf-poppler'] if ns.mode is Mode.POPPLER or ns.mode is Mode.MIXED else []
     utils.inkscape_run([
         *opts,
         f'--pdf-page={page_num}',
@@ -213,7 +222,7 @@ def process_page(filename: str, page_num: int, output_dir: str, ns: argparse.Nam
     ])
 
     text_layer_svg = None
-    if ns.mode == 'mixed':
+    if ns.mode is Mode.MIXED:
         text_layer_output = str(Path(output_dir) / f'output-{page_num}-text.svg')
         utils.inkscape_run([
             f'--pdf-page={page_num}',
