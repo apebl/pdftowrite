@@ -181,8 +181,8 @@ def arg_parser():
     parser.add_argument('-v', '--version', action='version', version=__version__)
     parser.add_argument('-o', '--output', action='store', type=str, default='',
                         help='Specify output filename')
-    parser.add_argument('-m', '--mode', type=Mode, default=Mode.POPPLER, choices=list(Mode),
-                        help='Specify render mode (default: poppler)')
+    parser.add_argument('-m', '--mode', type=Mode, default=Mode.MIXED, choices=list(Mode),
+                        help='Specify render mode (default: mixed)')
     parser.add_argument('-d', '--dpi', type=int, default=96,
                         help='Specify resolution for bitmaps and rasterized filters (default: 96)')
     parser.add_argument('-g', '--pages', action='store', type=str, default='all',
