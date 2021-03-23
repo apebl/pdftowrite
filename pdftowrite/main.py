@@ -108,7 +108,7 @@ class Page:
         return result
 
     def __split_tspan(self, tspan: ET.Element) -> list[ET.Element]:
-        pattern = r'([0-9.]+\s*[a-zA-Z]*)'
+        pattern = r'([0-9.]+\s*[a-zA-Z%]*)'
         x_list = re.findall(pattern, tspan.get('x', ''))
         if len(x_list) <= 1: return []
         result = []
@@ -167,7 +167,7 @@ class Page:
         return self.__viewbox_get(val, 4)
 
     def __viewbox_get(self, viewbox: str, get: int) -> str:
-        num = r'([0-9.]+\s*[a-zA-Z]*)'
+        num = r'([0-9.]+\s*[a-zA-Z%]*)'
         return utils.pattern_get(rf'{num}\s+{num}\s+{num}\s+{num}', viewbox, get)
 
 class Mode(Enum):
