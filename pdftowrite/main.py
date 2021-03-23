@@ -1,5 +1,5 @@
 import os, tempfile, subprocess, shutil
-import argparse, re, asyncio, operator, contextlib
+import argparse, re, asyncio, operator, contextlib, copy
 from pathlib import Path
 from typing import Any
 from enum import Enum
@@ -94,12 +94,32 @@ class Page:
 
     def __get_text_elements(self, tree) -> list[ET.Element]:
         result = []
-        els = tree.getroot().findall('.//{%s}text' % self.SVG_NS)
-        for el in els:
-            for el2 in el.iter():
-                el2.attrib.pop('id', None)
-                el2.attrib.pop('clip-path', None)
-            result.append(el)
+        texts = tree.getroot().findall('.//{%s}text' % self.SVG_NS)
+        for text in texts:
+            for el in text.iter():
+                el.attrib.pop('id', None)
+                el.attrib.pop('clip-path', None)
+            tspans = text.findall('.//{%s}tspan' % self.SVG_NS)
+            for tspan in tspans:
+                new_tspans = self.__split_tspan(tspan)
+                for new_tspan in new_tspans:
+                    text.append(new_tspan)
+            result.append(text)
+        return result
+
+    def __split_tspan(self, tspan: ET.Element) -> list[ET.Element]:
+        pattern = r'([0-9.]+\s*[a-zA-Z]*)'
+        x_list = re.findall(pattern, tspan.get('x', ''))
+        if len(x_list) <= 1: return []
+        result = []
+        text = tspan.text
+        tspan.set('x', x_list[0].strip())
+        tspan.text = text[0]
+        for i in range(1, len(x_list)):
+            new_tspan = copy.deepcopy(tspan)
+            new_tspan.set('x', x_list[i].strip())
+            new_tspan.text = text[i]
+            result.append(new_tspan)
         return result
 
     def __style_attr(self, style, name, val):
