@@ -20,50 +20,134 @@ class Page:
     ET.register_namespace('', SVG_NS)
     ET.register_namespace('xlink', XLINK_NS)
 
-    def __init__(self, page_num, svg):
+    def __init__(self, page_num, svg, text_layer_svg):
         self.page_num = page_num
-        self.svg = re.sub(r'<\?xml[^(\?>)]*\?>', '', svg)
-        tree = ET.ElementTree( ET.fromstring(self.svg) )
-        self.__remove_metadata(tree)
-        self.__uniquify(tree)
-        self.svg = ET.tostring(tree.getroot(), encoding='unicode')
+        self.suffix = '-' + shortuuid.uuid()[:7] + '-p' + str(self.page_num)
+        self.__process_svg(svg, text_layer_svg)
 
-    def __remove_metadata(self, tree):
-        root = tree.getroot()
+    def __process_svg(self, svg, text_layer_svg) -> str:
+        svg = re.sub(r'<\?xml[^(\?>)]*\?>', '', svg)
+        self.tree = ET.ElementTree( ET.fromstring(svg) )
+        self.__remove_metadata()
+        self.__uniquify()
+        if text_layer_svg:
+            self.text_layer = self.__create_text_layer(text_layer_svg)
+            self.tree.getroot().append(self.text_layer)
+        else:
+            self.text_layer = None
+
+    def __remove_metadata(self):
+        root = self.tree.getroot()
         for el in root:
             _, _, tag = el.tag.partition('}')
             if tag == 'metadata':
                 root.remove(el)
                 break
 
-    def __uniquify(self, tree):
-        suffix = '-' + shortuuid.uuid()[:7] + '-p' + str(self.page_num)
-        for el in tree.iter():
-            if 'id' in el.attrib:
-                el.attrib['id'] += suffix
-            if ('{%s}href' % self.XLINK_NS) in el.attrib:
-                el.attrib['{%s}href' % self.XLINK_NS] += suffix
-            if 'clip-path' in el.attrib:
-                attrib = el.get('clip-path')
-                match = re.search(r'url\s*\(\s*(.+?)\s*\)', attrib)
-                newid = match.group(1) + suffix
-                el.set('clip-path', f'url({newid})')
+    def __uniquify(self):
+        for el in self.tree.iter():
+            self.__uniquify_element(el, self.suffix)
+
+    def __uniquify_element(self, el: ET.Element, suffix: str):
+        if 'id' in el.attrib:
+            el.attrib['id'] += suffix
+        if ('{%s}href' % self.XLINK_NS) in el.attrib:
+            el.attrib['{%s}href' % self.XLINK_NS] += suffix
+        if 'clip-path' in el.attrib:
+            attrib = el.get('clip-path')
+            match = re.search(r'url\s*\(\s*(.+?)\s*\)', attrib)
+            newid = match.group(1) + suffix
+            el.set('clip-path', f'url({newid})')
+
+    def __create_text_layer(self, text_layer_svg) -> ET.Element:
+        tree = ET.ElementTree( ET.fromstring(text_layer_svg) )
+        text_layer_vb = tree.getroot().get('viewBox')
+        text_layer_vb_width = self.__viewbox_get(text_layer_vb, 3)
+        text_layer_vb_height = self.__viewbox_get(text_layer_vb, 4)
+        group = self.__create_text_group(tree)
+
+        el = ET.Element('svg')
+        el.set('id', 'text-layer' + self.suffix)
+        el.set('width', self.viewbox_width)
+        el.set('height', self.viewbox_height)
+        el.set('viewBox', f'0 0 {text_layer_vb_width} {text_layer_vb_height}')
+        el.append(group)
+        return el
+
+    def __create_text_group(self, tree) -> ET.Element:
+        group = ET.Element('g')
+        group.set('opacity', '0')
+
+        g = tree.getroot().find('./{%s}g[last()]' % self.SVG_NS)
+        if 'transform' in g.attrib:
+            group.set('transform', g.get('transform'))
+
+        text_els = self.__get_text_elements(tree)
+        for text_el in text_els:
+            style = text_el.get('style', '')
+            style = self.__style_attr(style, 'fill-opacity', '0')
+            style = self.__style_attr(style, 'stroke', 'none')
+            text_el.set('style', style)
+            group.append(text_el)
+        return group
+
+    def __get_text_elements(self, tree) -> list[ET.Element]:
+        result = []
+        els = tree.getroot().findall('.//{%s}text' % self.SVG_NS)
+        for el in els:
+            for el2 in el.iter():
+                el2.attrib.pop('id', None)
+                el2.attrib.pop('clip-path', None)
+            result.append(el)
+        return result
+
+    def __style_attr(self, style, name, val):
+        pattern = rf'({name}\s*:\s*)([^;]+?)(;|$)'
+        regex = re.compile(pattern)
+        if not regex.search(style):
+            return style + f';{name}:{val};'
+        else:
+            return regex.sub(rf'{name}:{val};', style)
+
+    @property
+    def svg(self) -> str:
+        return ET.tostring(self.tree.getroot(), encoding='unicode')
 
     @property
     def width(self) -> float:
-        return float(utils.pattern_get(r'width\s*=\s*"\s*([0-9.]+)', self.svg, 1))
+        val = self.tree.getroot().get('width')
+        return float( utils.pattern_get(r'([0-9.]+)', val, 1) )
 
     @width.setter
     def width(self, value: float):
-        self.svg = re.sub(r'(width\s*=\s*"\s*)([0-9.]+)', rf'\g<1>{value}', self.svg)
+        preval = self.tree.getroot().get('width')
+        newval = re.sub(r'([0-9.]+)', str(value), preval)
+        self.tree.getroot().set('width', newval)
 
     @property
     def height(self) -> float:
-        return float(utils.pattern_get(r'height\s*=\s*"\s*([0-9.]+)', self.svg, 1))
+        val = self.tree.getroot().get('height')
+        return float( utils.pattern_get(r'([0-9.]+)', val, 1) )
 
     @height.setter
     def height(self, value: float):
-        self.svg = re.sub(r'(height\s*=\s*"\s*)([0-9.]+)', rf'\g<1>{value}', self.svg)
+        preval = self.tree.getroot().get('height')
+        newval = re.sub(r'([0-9.]+)', str(value), preval)
+        self.tree.getroot().set('height', newval)
+
+    @property
+    def viewbox_width(self) -> str:
+        val = self.tree.getroot().get('viewBox')
+        return self.__viewbox_get(val, 3)
+
+    @property
+    def viewbox_height(self) -> str:
+        val = self.tree.getroot().get('viewBox')
+        return self.__viewbox_get(val, 4)
+
+    def __viewbox_get(self, viewbox: str, get: int) -> str:
+        num = r'([0-9.]+\s*[a-zA-Z]*)'
+        return utils.pattern_get(rf'{num}\s+{num}\s+{num}\s+{num}', viewbox, get)
 
 def get_doc_template() -> str:
     global DOC_TEMPLATE
@@ -88,7 +172,7 @@ def arg_parser():
     parser.add_argument('-v', '--version', action='version', version=__version__)
     parser.add_argument('-o', '--output', action='store', type=str, default='',
                         help='Specify output filename')
-    parser.add_argument('-m', '--mode', default='poppler', choices=['poppler', 'inkscape'],
+    parser.add_argument('-m', '--mode', default='poppler', choices=['mixed', 'poppler', 'inkscape'],
                         help='Specify render mode (default: poppler)')
     parser.add_argument('-d', '--dpi', type=int, default=96,
                         help='Specify resolution for bitmaps and rasterized filters (default: 96)')
@@ -118,7 +202,7 @@ def arg_parser():
 
 def process_page(filename: str, page_num: int, output_dir: str, ns: argparse.Namespace) -> Page:
     output = str(Path(output_dir) / f'output-{page_num}.svg')
-    opts = ['--pdf-poppler'] if ns.mode == 'poppler' else []
+    opts = ['--pdf-poppler'] if ns.mode == 'poppler' or ns.mode == 'mixed' else []
     utils.inkscape_run([
         *opts,
         f'--pdf-page={page_num}',
@@ -127,9 +211,23 @@ def process_page(filename: str, page_num: int, output_dir: str, ns: argparse.Nam
         '-o', output,
         filename
     ])
+
+    text_layer_svg = None
+    if ns.mode == 'mixed':
+        text_layer_output = str(Path(output_dir) / f'output-{page_num}-text.svg')
+        utils.inkscape_run([
+            f'--pdf-page={page_num}',
+            f'--export-dpi={ns.dpi}',
+            '--export-plain-svg',
+            '-o', text_layer_output,
+            filename
+        ])
+        with open(text_layer_output, 'r') as f:
+            text_layer_svg = f.read()
+
     with open(output, 'r') as f:
         svg = f.read()
-        return Page(page_num, svg)
+        return Page(page_num, svg, text_layer_svg)
 
 async def convert_to_pages(filename: str, page_nums: list[int], ns: argparse.Namespace) -> list[Page]:
     result = []
