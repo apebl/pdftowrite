@@ -3,7 +3,7 @@ import argparse, asyncio, operator, contextlib
 from pathlib import Path
 from enum import Enum
 import pdftowrite.utils as utils
-from pdftowrite.page import Page
+from pdftowrite.docs import Page
 from pdftowrite import __version__
 
 PACKAGE_DIR = Path(os.path.dirname(__file__))
