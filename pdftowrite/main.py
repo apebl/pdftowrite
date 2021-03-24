@@ -108,17 +108,30 @@ class Page:
     def __split_tspan(self, tspan: ET.Element) -> list[ET.Element]:
         pattern = r'([0-9.]+\s*[a-zA-Z%]*)'
         x_list = re.findall(pattern, tspan.get('x', ''))
-        if len(x_list) <= 1: return []
-        result = []
-        text = tspan.text
-        tspan.set('x', x_list[0].strip())
-        tspan.text = text[0]
-        for i in range(1, len(x_list)):
-            new_tspan = copy.deepcopy(tspan)
-            new_tspan.set('x', x_list[i].strip())
-            new_tspan.text = text[i]
-            result.append(new_tspan)
-        return result
+        if len(x_list) > 1:
+            result = []
+            text = tspan.text
+            tspan.set('x', x_list[0].strip())
+            tspan.text = text[0]
+            for i in range(1, len(x_list)):
+                new_tspan = copy.deepcopy(tspan)
+                new_tspan.set('x', x_list[i].strip())
+                new_tspan.text = text[i]
+                result.append(new_tspan)
+            return result
+        y_list = re.findall(pattern, tspan.get('y', ''))
+        if len(y_list) > 1:
+            result = []
+            text = tspan.text
+            tspan.set('y', y_list[0].strip())
+            tspan.text = text[0]
+            for i in range(1, len(y_list)):
+                new_tspan = copy.deepcopy(tspan)
+                new_tspan.set('y', y_list[i].strip())
+                new_tspan.text = text[i]
+                result.append(new_tspan)
+            return result
+        return []
 
     def __style_attr(self, style, name, val):
         pattern = rf'({name}\s*:\s*)([^;]+?)(;|$)'
