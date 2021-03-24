@@ -32,7 +32,7 @@ def pattern_get(pattern: str, string: str, group: int) -> str:
     match = re.search(pattern, string)
     if not match: raise ValueError(f'No match found by "{pattern}"')
     g = match.group(group)
-    if not g: raise ValueError(f'Match group {group} is empty')
+    if g is None: raise ValueError(f'Match group {group} is None')
     return g
 
 def number_of_pages(filename: str) -> int:
