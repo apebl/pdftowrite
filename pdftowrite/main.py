@@ -5,7 +5,6 @@ from typing import Any
 from enum import Enum
 import pdftowrite.utils as utils
 import xml.etree.ElementTree as ET
-import xml.dom.minidom as minidom
 import shortuuid
 from pdftowrite import __version__
 
@@ -308,12 +307,6 @@ def generate_document(pages: list[Page], nodup_pages: set[int], vars: dict[str,s
     body = '\n\n'.join(page_results)
     return utils.apply_vars(doc_tmp, { 'body': body })
 
-def prettify(xml: str) -> str:
-    dom = minidom.parseString(xml)
-    text = dom.toprettyxml()
-    text = '\n'.join([s for s in text.splitlines() if s.strip()])
-    return text
-
 def run(args):
     parser = arg_parser()
     ns = parser.parse_args(args)
@@ -344,7 +337,6 @@ def run(args):
     loop.close()
 
     doc = generate_document(pages, nodup_page_nums, vars, ns)
-    doc = prettify(doc)
 
     suffix = '.svg' if ns.nozip else '.svgz'
     output = ns.output if ns.output else str(Path(filename).with_suffix(suffix))
