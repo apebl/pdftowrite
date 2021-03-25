@@ -1,20 +1,26 @@
-# pdftowrite
+# pdftowrite: PDF <-> Write with text
 
 ![](pdftowrite.png)
 
-A utility that converts PDF to Stylus Labs Write document
+A utility that converts PDF to [Stylus Labs Write](http://www.styluslabs.com/)
+document with text, and vice versa.
 
 ## How does it work
 
-It converts PDF pages to SVG vector graphics and merges them into a Write
-document.
+`pdftowrite` converts PDF pages to SVG paths, adds an invisible but selectable
+text layer to each page, and merges them into a Write document.
 
-### Render modes
+`writetopdf` converts a Write document to a PDF.
 
-There are two render modes:
+### Why do I need `writetopdf`? Write itself can export PDF
 
- * poppler: The best quality, but losing text (default)
- * inkscape: Preserving text, but rendering results could be weird
+The PDF exporter of Write does not support Unicode text, but `writetopdf` does.
+
+### If I convert PDF -> Write -> PDF, Is the latter PDF is 100% the same as the former?
+
+No, the program does not guarantee it. `pdftowrite` converts PDF pages to SVG
+paths, so original text elements are deleted. Instead, a text layer is added to
+the page as mentioned earlier.
 
 ## Install
 
@@ -24,8 +30,23 @@ pip install --user pdftowrite
 
 ### Requirements
 
+`pdftowrite`:
+
  * Poppler
  * Inkscape (either native or flatpak)
+ * gzip
+
+`writetopdf`:
+
+ * wkhtmltopdf
+ * PDFtk(pdftk-java) or Poppler
+ * gzip
+
+You need to manually install the packages. e.g.:
+
+- Debian/Ubuntu: `sudo apt install poppler-utils inkscape gzip wkhtmltopdf pdftk`
+- Fedora: `sudo dnf install poppler inkscape gzip wkhtmltopdf pdftk`
+- Arch: `sudo pacman -S poppler inkscape gzip wkhtmltopdf pdftk`
 
 ## Example
 
@@ -33,10 +54,16 @@ pip install --user pdftowrite
 pdftowrite example.pdf
 ```
 
+```
+writetopdf example.svgz
+```
+
 ## Usage
 
+### pdftowrite
+
 ```
-usage: pdftowrite [-h] [-v] [-o OUTPUT] [-m {poppler,inkscape}] [-d DPI]
+usage: pdftowrite [-h] [-v] [-o OUTPUT] [-m {mixed,poppler,inkscape}] [-d DPI]
                   [-g PAGES] [-u NODUP_PAGES] [-Z] [-s SCALE] [-x X] [-y Y]
                   [-X XRULING] [-Y YRULING] [-l MARGIN_LEFT] [-p PAPERCOLOR]
                   [-r RULECOLOR]
@@ -52,8 +79,8 @@ optional arguments:
   -v, --version         show program's version number and exit
   -o OUTPUT, --output OUTPUT
                         Specify output filename
-  -m {poppler,inkscape}, --mode {poppler,inkscape}
-                        Specify render mode (default: poppler)
+  -m {mixed,poppler,inkscape}, --mode {mixed,poppler,inkscape}
+                        Specify render mode (default: mixed)
   -d DPI, --dpi DPI     Specify resolution for bitmaps and rasterized filters
                         (default: 96)
   -g PAGES, --pages PAGES
@@ -81,3 +108,24 @@ optional arguments:
                         Specify rule color (default: #9F0000FF)
 ```
 
+### writetopdf
+
+```
+usage: writetopdf [-h] [-v] [-o OUTPUT] [-g PAGES] [-s SCALE] FILE
+
+Convert Stylus Labs Write document to PDF
+
+positional arguments:
+  FILE                  A Write document
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
+  -o OUTPUT, --output OUTPUT
+                        Specify output filename
+  -g PAGES, --pages PAGES
+                        Specify pages to convert (e.g. "1 2 3", "1-3")
+                        (default: all)
+  -s SCALE, --scale SCALE
+                        Scale page size (default: 1.0)
+```
