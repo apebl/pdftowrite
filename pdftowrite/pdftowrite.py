@@ -107,9 +107,7 @@ async def convert_to_pages(filename: str, page_nums: list[int], ns: argparse.Nam
         for num in page_nums:
             task = loop.run_in_executor(None, process_page, filename, num, tmpdir, ns)
             tasks.append(task)
-        for task in tasks:
-            page = await task
-            result.append(page)
+        result = await asyncio.gather(*tasks)
     return sorted(result, key=operator.attrgetter('page_num'))
 
 def generate_document(pages: list[Page], nodup_pages: set[int], vars: dict[str,str], ns: argparse.Namespace) -> None:
