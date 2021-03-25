@@ -160,10 +160,16 @@ def run(args):
     suffix = '.svg' if ns.nozip else '.svgz'
     output = ns.output if ns.output else str(Path(filename).with_suffix(suffix))
     tmp_output = output if ns.nozip else output + '.tmp'
+    if Path(tmp_output).exists():
+        if not utils.query_yn(f'Overwrite?: {tmp_output}'): return
     with open(tmp_output, 'w') as f:
         f.write(doc)
     if not ns.nozip:
+        if Path(tmp_output + '.gz').exists():
+            if not utils.query_yn(f'Overwrite?: {tmp_output}.gz'): return
         subprocess.check_call(['gzip', '-f', tmp_output])
+        if Path(output).exists():
+            if not utils.query_yn(f'Overwrite?: {output}'): return
         with contextlib.suppress(FileNotFoundError):
             os.remove(output)
         shutil.move(tmp_output + '.gz', output)

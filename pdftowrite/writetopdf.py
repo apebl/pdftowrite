@@ -100,6 +100,9 @@ def run(args):
     doc = Document(svg, page_nums)
     output = ns.output if ns.output else str(Path(filename).with_suffix('.pdf'))
 
+    if Path(output).exists():
+        if not utils.query_yn(f'Overwrite?: {output}'): return
+
     loop = asyncio.get_event_loop()
     loop.run_until_complete( generate_pdf(doc, output, ns) )
     loop.close()

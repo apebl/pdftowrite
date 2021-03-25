@@ -3,6 +3,15 @@ from subprocess import DEVNULL
 from typing import Optional, Any
 import xml.etree.ElementTree as ET
 
+def query_yn(question: str) -> bool:
+    while True:
+        print(question + ' [y/n]', end=' ')
+        choice = input().lower()
+        if choice == 'y' or choice == 'yes':
+            return True
+        elif choice == 'n' or choice == 'no':
+            return False
+
 def apply_vars(text: str, vars: dict[str,Any]) -> str:
     for k, v in vars.items():
         text = text.replace('{%s}' % k, str(v))
