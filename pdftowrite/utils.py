@@ -1,6 +1,7 @@
 import subprocess, re, sys
 from subprocess import DEVNULL
 from typing import Optional, Any
+import xml.etree.ElementTree as ET
 
 def apply_vars(text: str, vars: dict[str,Any]) -> str:
     for k, v in vars.items():
@@ -59,3 +60,29 @@ def parse_range(text: str, num_pages: int) -> set[int]:
             continue
         raise ValueError(f'Invalid page range: {text}')
     return pages
+
+def find_elements_by_class(tree: ET.ElementTree, cls: str) -> ET.Element:
+    result = []
+    for el in tree.iter():
+        if cls in el.get('class', ''):
+            result.append(el)
+    return result
+
+def px(length: str) -> float:
+    match = re.search(r'([0-9.]+)\s*([a-zA-Z%]*)', length)
+    num = match.group(1)
+    unit = match.group(2)
+    if   unit == 'cm':
+        return float(num) * 37.795
+    elif unit == 'mm':
+        return float(num) * 3.7795
+    elif unit == 'in':
+        return float(num) * 96.0
+    elif unit == 'pc':
+        return float(num) * 16.0
+    elif unit == 'pt':
+        return float(num) * 1.333333333
+    elif unit == 'px' or unit == '':
+        return float(num)
+    else:
+        raise ValueError(f'Invalid length: {length}')

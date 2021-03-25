@@ -1,25 +1,26 @@
 import xml.etree.ElementTree as ET
 import re, copy
 import shortuuid
+from typing import Optional
 import pdftowrite.utils as utils
 
 SVG_NS = 'http://www.w3.org/2000/svg'
 XLINK_NS = 'http://www.w3.org/1999/xlink'
 
-class Page:
-    ET.register_namespace('', SVG_NS)
-    ET.register_namespace('xlink', XLINK_NS)
+ET.register_namespace('', SVG_NS)
+ET.register_namespace('xlink', XLINK_NS)
 
-    def __init__(self, page_num, svg, text_layer_svg):
+class Page:
+    def __init__(self, page_num, svg, text_layer_svg, uniquify=True):
         self.page_num = page_num
         self.suffix = '-' + shortuuid.uuid()[:7] + '-p' + str(self.page_num)
-        self.__process_svg(svg, text_layer_svg)
+        self.__process_svg(svg, text_layer_svg, uniquify)
 
-    def __process_svg(self, svg, text_layer_svg) -> str:
+    def __process_svg(self, svg, text_layer_svg, uniquify) -> None:
         svg = re.sub(r'<\?xml[^(\?>)]*\?>', '', svg)
         self.tree = ET.ElementTree( ET.fromstring(svg) )
         self.__remove_metadata()
-        self.__uniquify()
+        if uniquify: self.__uniquify()
         if text_layer_svg:
             self.text_layer = self.__create_text_layer(text_layer_svg)
             self.tree.getroot().append(self.text_layer)
@@ -135,6 +136,48 @@ class Page:
         return ET.tostring(self.tree.getroot(), encoding='unicode')
 
     @property
+    def x(self) -> float:
+        val = self.tree.getroot().get('x', '0')
+        return float( utils.pattern_get(r'([0-9.]+)', val, 1) )
+
+    @x.setter
+    def x(self, value: float):
+        preval = self.tree.getroot().get('x', '0')
+        newval = re.sub(r'([0-9.]+)', str(value), preval)
+        self.tree.getroot().set('x', newval)
+
+    @property
+    def y(self) -> float:
+        val = self.tree.getroot().get('y', '0')
+        return float( utils.pattern_get(r'([0-9.]+)', val, 1) )
+
+    @y.setter
+    def y(self, value: float):
+        preval = self.tree.getroot().get('y', '0')
+        newval = re.sub(r'([0-9.]+)', str(value), preval)
+        self.tree.getroot().set('y', newval)
+
+    @property
+    def x_unit(self) -> str:
+        val = self.tree.getroot().get('x', '0')
+        return utils.pattern_get(r'([0-9.]+)(.*?)$', val, 2)
+
+    @x_unit.setter
+    def x_unit(self, unit: str):
+        val = self.x
+        self.tree.getroot().set('x', f'{val}{unit}')
+
+    @property
+    def y_unit(self) -> str:
+        val = self.tree.getroot().get('y', '0')
+        return utils.pattern_get(r'([0-9.]+)(.*?)$', val, 2)
+
+    @y_unit.setter
+    def y_unit(self, unit: str):
+        val = self.y
+        self.tree.getroot().set('y', f'{val}{unit}')
+
+    @property
     def width(self) -> float:
         val = self.tree.getroot().get('width')
         return float( utils.pattern_get(r'([0-9.]+)', val, 1) )
@@ -161,10 +204,47 @@ class Page:
         val = self.tree.getroot().get('width')
         return utils.pattern_get(r'([0-9.]+)(.*?)$', val, 2)
 
+    @width_unit.setter
+    def width_unit(self, unit: str):
+        val = self.width
+        self.tree.getroot().set('width', f'{val}{unit}')
+
     @property
     def height_unit(self) -> str:
         val = self.tree.getroot().get('height')
         return utils.pattern_get(r'([0-9.]+)(.*?)$', val, 2)
+
+    @height_unit.setter
+    def height_unit(self, unit: str):
+        val = self.height
+        self.tree.getroot().set('height', f'{val}{unit}')
+
+    @property
+    def width_full(self) -> str:
+        return self.tree.getroot().get('width').strip()
+
+    @width_full.setter
+    def width_full(self, val: str):
+        self.tree.getroot().set('width', val)
+
+    @property
+    def height_full(self) -> str:
+        return self.tree.getroot().get('height').strip()
+
+    @height_full.setter
+    def height_full(self, val: str):
+        self.tree.getroot().set('height', val)
+
+    @property
+    def viewbox(self) -> Optional[str]:
+        return self.tree.getroot().get('viewBox', None)
+
+    @viewbox.setter
+    def viewbox(self, value: Optional[str]):
+        if value is None:
+            self.tree.getroot().pop('viewBox', None)
+        else:
+            self.tree.getroot().set('viewBox', value)
 
     @property
     def viewbox_width(self) -> str:
@@ -179,3 +259,27 @@ class Page:
     def __viewbox_get(self, viewbox: str, get: int) -> str:
         num = r'([0-9.]+\s*[a-zA-Z%]*)'
         return utils.pattern_get(rf'{num}\s+{num}\s+{num}\s+{num}', viewbox, get)
+
+class Document:
+    def __init__(self, svg: str, page_nums: set[int]):
+        self.tree = ET.ElementTree( ET.fromstring(svg) )
+        self.pages = []
+        page_els = self.tree.getroot().findall('./{%s}svg' % SVG_NS)
+        num = 0
+        for page_el in page_els:
+            num += 1
+            if 'write-page' not in page_el.get('class', ''): continue
+            if num not in page_nums: continue
+            page_svg = ET.tostring(page_el, encoding='unicode')
+            page = Page(num, page_svg, None, False)
+            self.pages.append(page)
+        if num <= 0: raise Exception('Document has no pages')
+
+def num_pages(svg: str) -> int:
+    tree = ET.ElementTree( ET.fromstring(svg) )
+    page_els = tree.getroot().findall('./{%s}svg' % SVG_NS)
+    num = 0
+    for page_el in page_els:
+        if 'write-page' not in page_el.get('class', ''): continue
+        num += 1
+    return num

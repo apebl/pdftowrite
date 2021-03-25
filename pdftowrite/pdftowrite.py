@@ -1,4 +1,4 @@
-import os, tempfile, subprocess, shutil
+import os, tempfile, subprocess, shutil, sys
 import argparse, asyncio, operator, contextlib
 from pathlib import Path
 from enum import Enum
@@ -116,8 +116,8 @@ def generate_document(pages: list[Page], nodup_pages: set[int], vars: dict[str,s
     for page in pages:
         page.width = page.width * ns.scale
         page.height = page.height * ns.scale
-        vars['width'] = str(page.width) + page.width_unit
-        vars['height'] = str(page.height) + page.height_unit
+        vars['width'] = page.width_full
+        vars['height'] = page.height_full
         vars['ruleline-classes'] = '' if page.page_num in nodup_pages else 'write-no-dup'
         vars['body'] = page.svg
         text = utils.apply_vars(page_tmp, vars)
@@ -167,3 +167,6 @@ def run(args):
         with contextlib.suppress(FileNotFoundError):
             os.remove(output)
         shutil.move(tmp_output + '.gz', output)
+
+def main():
+    run(sys.argv[1:])

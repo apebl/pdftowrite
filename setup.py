@@ -16,7 +16,7 @@ setuptools.setup(
     version=get_property('__version__', 'pdftowrite'),
     author='Космическое П.',
     author_email='kosmospredanie@yandex.ru',
-    description='PDF to Write document converter',
+    description='PDF <-> Write document converter',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/kosmospredanie/pdftowrite',
@@ -42,7 +42,8 @@ setuptools.setup(
     python_requires='>=3.7',
     entry_points={
         'console_scripts': [
-            'pdftowrite=pdftowrite:main',
+            'pdftowrite=pdftowrite.pdftowrite:main',
+            'writetopdf=pdftowrite.writetopdf:main',
         ],
     },
 )
