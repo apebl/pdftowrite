@@ -14,7 +14,8 @@ text layer to each page, and merges them into a Write document.
 
 ### Why do I need `writetopdf`? Write itself can export PDF
 
-The PDF exporter of Write does not support Unicode text, but `writetopdf` does.
+The PDF exporter of Write does not support Unicode text and multi-coords
+tspans, but `writetopdf` does.
 
 ### If I convert PDF -> Write -> PDF, Is the latter PDF is 100% the same as the former?
 
