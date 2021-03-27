@@ -45,11 +45,14 @@ class Page:
             el.attrib['id'] += suffix
         if tag == 'use' and ('{%s}href' % XLINK_NS) in el.attrib:
             el.attrib['{%s}href' % XLINK_NS] += suffix
-        if 'clip-path' in el.attrib:
-            attrib = el.get('clip-path')
-            match = re.search(r'url\s*\(\s*(.+?)\s*\)', attrib)
+        self.__uniquify_url_attribs(el, suffix)
+
+    def __uniquify_url_attribs(self, el: ET.Element, suffix: str):
+        for k, v in el.attrib.items():
+            match = re.search(r'url\s*\(\s*#\s*(.+?)\s*\)', v)
+            if not match: continue
             newid = match.group(1) + suffix
-            el.set('clip-path', f'url({newid})')
+            el.set(k, f'url(#{newid})')
 
     def __create_text_layer(self, text_layer_svg) -> ET.Element:
         tree = ET.ElementTree( ET.fromstring(text_layer_svg) )
