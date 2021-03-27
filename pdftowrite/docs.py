@@ -49,10 +49,8 @@ class Page:
 
     def __uniquify_url_attribs(self, el: ET.Element, suffix: str):
         for k, v in el.attrib.items():
-            match = re.search(r'url\s*\(\s*#\s*(.+?)\s*\)', v)
-            if not match: continue
-            newid = match.group(1) + suffix
-            el.set(k, f'url(#{newid})')
+            newv = re.sub(r'url\s*\(\s*#\s*(.+?)\s*\)', lambda m: f'url(#{m.group(1) + suffix})', v)
+            el.set(k, newv)
 
     def __create_text_layer(self, text_layer_svg) -> ET.Element:
         tree = ET.ElementTree( ET.fromstring(text_layer_svg) )
