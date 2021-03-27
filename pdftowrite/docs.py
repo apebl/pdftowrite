@@ -40,9 +40,10 @@ class Page:
             self.__uniquify_element(el, self.suffix)
 
     def __uniquify_element(self, el: ET.Element, suffix: str):
+        _, _, tag = el.tag.partition('}')
         if 'id' in el.attrib:
             el.attrib['id'] += suffix
-        if ('{%s}href' % XLINK_NS) in el.attrib:
+        if tag == 'use' and ('{%s}href' % XLINK_NS) in el.attrib:
             el.attrib['{%s}href' % XLINK_NS] += suffix
         if 'clip-path' in el.attrib:
             attrib = el.get('clip-path')
