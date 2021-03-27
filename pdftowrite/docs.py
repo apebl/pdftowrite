@@ -60,6 +60,7 @@ class Page:
 
         el = ET.Element('svg')
         el.set('id', 'text-layer' + self.suffix)
+        el.set('class', el.get('class', '') + ' pdftowrite-text-layer')
         el.set('width', self.viewbox_width)
         el.set('height', self.viewbox_height)
         el.set('viewBox', f'0 0 {text_layer_vb_width} {text_layer_vb_height}')
