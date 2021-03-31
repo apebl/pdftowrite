@@ -3,6 +3,7 @@ import re, copy
 import shortuuid
 from typing import Optional
 import pdftowrite.utils as utils
+from picosvg.svg import SVG
 
 SVG_NS = 'http://www.w3.org/2000/svg'
 XLINK_NS = 'http://www.w3.org/1999/xlink'
@@ -11,15 +12,19 @@ ET.register_namespace('', SVG_NS)
 ET.register_namespace('xlink', XLINK_NS)
 
 class Page:
-    def __init__(self, page_num, svg, text_layer_svg, uniquify=True):
+    def __init__(self, page_num, svg, text_layer_svg, compat_mode=True, uniquify=True):
         self.page_num = page_num
         self.suffix = '-' + shortuuid.uuid()[:7] + '-p' + str(self.page_num)
-        self.__process_svg(svg, text_layer_svg, uniquify)
+        self.__process_svg(svg, text_layer_svg, compat_mode, uniquify)
 
-    def __process_svg(self, svg, text_layer_svg, uniquify) -> None:
+    def __process_svg(self, svg, text_layer_svg, compat_mode, uniquify) -> None:
         svg = re.sub(r'<\?xml[^(\?>)]*\?>', '', svg)
         self.tree = ET.ElementTree( ET.fromstring(svg) )
         self.__remove_metadata()
+        self.__remove_inkscape_styles()
+        if compat_mode:
+            self.__simplify()
+            self.__remove_masked_rects()
         if uniquify: self.__uniquify()
         if text_layer_svg:
             self.text_layer = self.__create_text_layer(text_layer_svg)
@@ -34,6 +39,122 @@ class Page:
             if tag == 'metadata':
                 root.remove(el)
                 break
+
+    def __remove_inkscape_styles(self):
+        for el in self.tree.iter():
+            if 'style' in el.attrib:
+                style = el.get('style')
+                style = re.sub(r'[^;]*inkscape[^;]*(;|$)', '', style)
+                el.set('style', style)
+
+    def __simplify(self):
+        try:
+            self.__tree_map = { el.get('id', ''): el for el in self.tree.iter() }
+            self.__parent_map = { c:p for p in self.tree.iter() for c in p }
+
+            clip_groups = self.__get_clip_root_groups()
+            clip_paths = self.__get_clip_paths()
+            attachments = {}
+            for g in clip_groups:
+                attachs = self.__get_attachments_for(g)
+                attachments.update(attachs)
+
+            svg = ET.Element('svg')
+            defs = ET.Element('defs')
+            for el in clip_paths:
+                dup = copy.deepcopy(el)
+                defs.append(dup)
+            for el in attachments.values():
+                dup = copy.deepcopy(el)
+                defs.append(dup)
+            svg.append(defs)
+            for el in clip_groups:
+                dup = copy.deepcopy(el)
+                svg.append(dup)
+
+            svg_tree = ET.ElementTree(svg)
+            self.__parent_map = { c:p for p in svg_tree.iter() for c in p }
+            self.__remove_images(svg)
+            svg_text = ET.tostring(svg, encoding='unicode')
+
+            picosvg = SVG.fromstring(svg_text).topicosvg()
+            picosvg_text = picosvg.tostring()
+            picosvg_tree = ET.ElementTree( ET.fromstring(picosvg_text) )
+
+            picosvg_paths = picosvg_tree.findall('.//{%s}path' % SVG_NS)
+            picosvg_paths_map = { el.get('id', ''): el for el in picosvg_paths}
+
+            paths = []
+            for g in clip_groups:
+                paths += g.findall('.//{%s}path' % SVG_NS)
+            for el in paths:
+                id = el.get('id', '')
+                pico_path = picosvg_paths_map[id]
+                d = pico_path.get('d', '')
+                el.set('d', d)
+            self.__tree_map = None
+            self.__parent_map = None
+        except:
+            pass
+
+    def __get_clip_root_groups(self) -> list[ET.Element]:
+        result = []
+        for el in self.tree.iter():
+            if 'clip-path' not in el.attrib: continue
+            if self.__group_has_clip_ancestors(el): continue
+            result.append(el)
+        return result
+
+    def __group_has_clip_ancestors(self, el: ET.Element) -> bool:
+        parent = self.__parent_map.get(el)
+        if parent is None: return False
+        if 'clip-path' in parent.attrib: return True
+        return self.__group_has_clip_ancestors(parent)
+
+    def __get_clip_paths(self) -> list[ET.Element]:
+        result = []
+        for el in self.tree.iter():
+            _, _, tag = el.tag.partition('}')
+            if tag == 'clipPath':
+                result.append(el)
+        return result
+
+    def __get_attachments_for(self, el: ET.Element) -> dict[str,ET.Element]:
+        href_els = el.findall('.//*[@{%s}href]' % XLINK_NS)
+        result = {}
+        for href_el in href_els:
+            match = re.search(r'#\s*([^\s]+)', href_el.get('{%s}href' % XLINK_NS))
+            id = match.group(1)
+            target_el = self.__tree_map[id]
+            _, _, target_tag = target_el.tag.partition('}')
+            if target_tag != 'image':
+                result[id] = target_el
+        return result
+
+    def __remove_images(self, el: ET.Element) -> None:
+        href_els = el.findall('.//*[@{%s}href]' % XLINK_NS)
+        for href_el in href_els:
+            match = re.search(r'#\s*([^\s]+)', href_el.get('{%s}href' % XLINK_NS))
+            id = match.group(1)
+            target_el = self.__tree_map[id]
+            _, _, target_tag = target_el.tag.partition('}')
+            if target_tag == 'image':
+                self.__parent_map[href_el].remove(href_el)
+        image_els = el.findall('.//{%s}image' % XLINK_NS)
+        for image_el in image_els:
+            self.__parent_map[image_el].remove(image_el)
+
+    def __remove_masked_rects(self):
+        self.__parent_map = { c:p for p in self.tree.iter() for c in p }
+        rects = self.tree.getroot().findall('.//{%s}rect[@mask]' % SVG_NS)
+        fill_pattern = r'^rgba?\s*\(\s*0(\.0*)?%?\s*,\s*0(\.0*)?%?\s*,\s*0(\.0*)?%?\s*(100%\s*|1(\.0*)?\s*)?\)?$|^#000000(ff)?$|^black$'
+        for rect in rects:
+            fill = utils.get_style_attr(rect, 'fill')
+            fill_opacity = utils.get_style_attr(rect, 'fill-opacity')
+            if fill and not re.search(fill_pattern, fill, flags=re.IGNORECASE): continue
+            if fill_opacity and not re.search(r'^1(\.0*)?$', fill_opacity): continue
+            self.__parent_map[rect].remove(rect)
+        self.__parent_map = None
 
     def __uniquify(self):
         for el in self.tree.iter():
@@ -241,7 +362,7 @@ class Document:
             if 'write-page' not in page_el.get('class', ''): continue
             if num not in page_nums: continue
             page_svg = ET.tostring(page_el, encoding='unicode')
-            page = Page(num, page_svg, None, False)
+            page = Page(num, page_svg, None, False, False)
             self.pages.append(page)
         if num <= 0: raise Exception('Document has no pages')
 

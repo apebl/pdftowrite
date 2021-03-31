@@ -70,7 +70,7 @@ def parse_range(text: str, num_pages: int) -> set[int]:
         raise ValueError(f'Invalid page range: {text}')
     return pages
 
-def find_elements_by_class(tree: ET.ElementTree, cls: str) -> ET.Element:
+def find_elements_by_class(tree: ET.ElementTree, cls: str) -> list[ET.Element]:
     result = []
     for el in tree.iter():
         if cls in el.get('class', ''):
@@ -95,3 +95,13 @@ def px(length: str) -> float:
         return float(num)
     else:
         raise ValueError(f'Invalid length: {length}')
+
+def get_style_attr(el: ET.Element, name: str) -> Optional[str]:
+    if name in el.attrib:
+        return el.get(name).strip()
+    style = el.get('style', '')
+    pattern = rf'({name})\s*:\s*([^;]+?)(;|$)'
+    regex = re.compile(pattern)
+    match = regex.search(style)
+    if not match: return None
+    return match.group(2).strip()

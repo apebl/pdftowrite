@@ -44,6 +44,8 @@ def arg_parser():
                         help='Specify output filename')
     parser.add_argument('-m', '--mode', type=Mode, default=Mode.MIXED, choices=list(Mode),
                         help='Specify render mode (default: mixed)')
+    parser.add_argument('-C', '--no-compat-mode', action='store_true',
+                        help='Turn off Write compatibility mode')
     parser.add_argument('-d', '--dpi', type=int, default=96,
                         help='Specify resolution for bitmaps and rasterized filters (default: 96)')
     parser.add_argument('-g', '--pages', action='store', type=str, default='all',
@@ -97,7 +99,7 @@ def process_page(filename: str, page_num: int, output_dir: str, ns: argparse.Nam
 
     with open(output, 'r') as f:
         svg = f.read()
-        return Page(page_num, svg, text_layer_svg)
+        return Page(page_num, svg, text_layer_svg, not ns.no_compat_mode)
 
 async def convert_to_pages(filename: str, page_nums: list[int], ns: argparse.Namespace) -> list[Page]:
     result = []

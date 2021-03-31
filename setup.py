@@ -38,6 +38,7 @@ setuptools.setup(
     },
     install_requires=[
         'shortuuid',
+        'picosvg'
     ],
     python_requires='>=3.7',
     entry_points={
