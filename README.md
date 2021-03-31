@@ -14,8 +14,8 @@ text layer to each page, and merges them into a Write document.
 
 ### Why do I need `writetopdf`? Write itself can export PDF
 
-The PDF exporter of Write does not support Unicode text and multi-coords
-tspans, but `writetopdf` does.
+The PDF exporter of Write does not support some features (e.g. Unicode text,
+multi-coords tspans, etc.), but `writetopdf` does.
 
 ### If I convert PDF -> Write -> PDF, Is the latter PDF is 100% the same as the former?
 
@@ -64,10 +64,10 @@ writetopdf example.svgz
 ### pdftowrite
 
 ```
-usage: pdftowrite [-h] [-v] [-o OUTPUT] [-m {mixed,poppler,inkscape}] [-d DPI]
-                  [-g PAGES] [-u NODUP_PAGES] [-Z] [-s SCALE] [-x X] [-y Y]
-                  [-X XRULING] [-Y YRULING] [-l MARGIN_LEFT] [-p PAPERCOLOR]
-                  [-r RULECOLOR]
+usage: pdftowrite [-h] [-v] [-o OUTPUT] [-m {mixed,poppler,inkscape}] [-C]
+                  [-d DPI] [-g PAGES] [-u NODUP_PAGES] [-Z] [-s SCALE] [-x X]
+                  [-y Y] [-X XRULING] [-Y YRULING] [-l MARGIN_LEFT]
+                  [-p PAPERCOLOR] [-r RULECOLOR]
                   FILE
 
 Convert PDF to Stylus Labs Write document
@@ -82,6 +82,7 @@ optional arguments:
                         Specify output filename
   -m {mixed,poppler,inkscape}, --mode {mixed,poppler,inkscape}
                         Specify render mode (default: mixed)
+  -C, --no-compat-mode  Turn off Write compatibility mode
   -d DPI, --dpi DPI     Specify resolution for bitmaps and rasterized filters
                         (default: 96)
   -g PAGES, --pages PAGES
