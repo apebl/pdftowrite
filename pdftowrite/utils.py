@@ -1,4 +1,4 @@
-import subprocess, re, sys
+import subprocess, re, sys, base64
 from subprocess import DEVNULL
 from typing import Optional, Any
 import xml.etree.ElementTree as ET
@@ -105,3 +105,23 @@ def get_style_attr(el: ET.Element, name: str) -> Optional[str]:
     match = regex.search(style)
     if not match: return None
     return match.group(2).strip()
+
+def tagname(el: ET.Element) -> str:
+    _, _, tag = el.tag.partition('}')
+    return tag
+
+def decode_image_uri(href: str) -> tuple[str,str,bytes]:
+    header, encoded = href.split(',', 1)
+    suffix = ''
+    if header == 'data:image/png;base64':
+        suffix = '.png'
+    elif header == 'data:image/jpeg;base64':
+        suffix = '.jpeg'
+    else:
+        header = ''
+    data = base64.b64decode(encoded) if suffix else b''
+    return header, suffix, data
+
+def encode_image_uri(data: bytes) -> str:
+    encoded = base64.b64encode(data)
+    return encoded.decode('utf-8')

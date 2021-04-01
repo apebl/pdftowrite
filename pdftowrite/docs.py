@@ -1,9 +1,11 @@
 import xml.etree.ElementTree as ET
-import re, copy
+import re, copy, subprocess, tempfile
 import shortuuid
 from typing import Optional
 import pdftowrite.utils as utils
 from picosvg.svg import SVG
+from subprocess import DEVNULL
+from pathlib import Path
 
 SVG_NS = 'http://www.w3.org/2000/svg'
 XLINK_NS = 'http://www.w3.org/1999/xlink'
@@ -25,6 +27,7 @@ class Page:
         if compat_mode:
             self.__simplify()
             self.__remove_masked_rects()
+            self.__convert_masked_images()
         if uniquify: self.__uniquify()
         if text_layer_svg:
             self.text_layer = self.__create_text_layer(text_layer_svg)
@@ -154,6 +157,56 @@ class Page:
             if fill and not re.search(fill_pattern, fill, flags=re.IGNORECASE): continue
             if fill_opacity and not re.search(r'^1(\.0*)?$', fill_opacity): continue
             self.__parent_map[rect].remove(rect)
+        self.__parent_map = None
+
+    def __convert_masked_images(self):
+        self.__tree_map = { el.get('id', ''): el for el in self.tree.iter() }
+        self.__parent_map = { c:p for p in self.tree.iter() for c in p }
+
+        uses = self.tree.getroot().findall('.//{%s}use[@{%s}href][@mask]' % (SVG_NS, XLINK_NS))
+        for use in uses:
+            href = use.get('{%s}href' % XLINK_NS)
+            href_id = utils.pattern_get(r'#\s*([^\s]+)', href, 1)
+            href_el = self.__tree_map[href_id]
+            if utils.tagname(href_el) != 'image': continue
+
+            mask = use.get('mask')
+            mask_id = utils.pattern_get(r'url\s*\(\s*#\s*(.+?)\s*\)', mask, 1)
+            mask_el = self.__tree_map[mask_id]
+            mask_use_el = mask_el.find('.//{%s}use[@{%s}href]' % (SVG_NS, XLINK_NS))
+            if mask_use_el is None: continue
+            mask_use_el_href_id = utils.pattern_get(r'#\s*([^\s]+)', mask_use_el.get('{%s}href' % XLINK_NS), 1)
+            mask_use_el_href_el = self.__tree_map[mask_use_el_href_id]
+
+            image_data_uri = href_el.get('{%s}href' % XLINK_NS, '')
+            mask_data_uri = mask_use_el_href_el.get('{%s}href' % XLINK_NS, '')
+            if not image_data_uri or not mask_data_uri: continue
+            img_header, img_suffix, img_data = utils.decode_image_uri(image_data_uri)
+            mask_header, mask_suffix, mask_data = utils.decode_image_uri(mask_data_uri)
+            if not img_header or not mask_header: continue
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                img_path = str(Path(tmpdir) / f'image{img_suffix}')
+                mask_path = str(Path(tmpdir) / f'mask{mask_suffix}')
+                comb_path = str(Path(tmpdir) / f'comb.png')
+                with open(img_path, 'wb') as f:
+                    f.write(img_data)
+                    f.flush()
+                with open(mask_path, 'wb') as f:
+                    f.write(mask_data)
+                    f.flush()
+                subprocess.check_call(
+                    ['convert', img_path, mask_path, '-compose', 'CopyOpacity', '-composite', comb_path],
+                    stdout=DEVNULL, stderr=DEVNULL)
+                with open(comb_path, 'rb') as f:
+                    data = f.read()
+
+            encoded = utils.encode_image_uri(data)
+            data_uri = 'data:image/png;base64,' + encoded
+            href_el.set('{%s}href' % XLINK_NS, data_uri)
+            use.attrib.pop('mask')
+
+        self.__tree_map = None
         self.__parent_map = None
 
     def __uniquify(self):
