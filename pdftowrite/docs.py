@@ -150,12 +150,7 @@ class Page:
     def __remove_masked_rects(self):
         self.__parent_map = { c:p for p in self.tree.iter() for c in p }
         rects = self.tree.getroot().findall('.//{%s}rect[@mask]' % SVG_NS)
-        fill_pattern = r'^rgba?\s*\(\s*0(\.0*)?%?\s*,\s*0(\.0*)?%?\s*,\s*0(\.0*)?%?\s*(100%\s*|1(\.0*)?\s*)?\)?$|^#000000(ff)?$|^black$'
         for rect in rects:
-            fill = utils.get_style_attr(rect, 'fill')
-            fill_opacity = utils.get_style_attr(rect, 'fill-opacity')
-            if fill and not re.search(fill_pattern, fill, flags=re.IGNORECASE): continue
-            if fill_opacity and not re.search(r'^1(\.0*)?$', fill_opacity): continue
             self.__parent_map[rect].remove(rect)
         self.__parent_map = None
 
