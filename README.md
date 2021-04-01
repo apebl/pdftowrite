@@ -35,6 +35,7 @@ pip install --user pdftowrite
 
  * Poppler
  * Inkscape (either native or flatpak)
+ * ImageMagick
  * gzip
 
 `writetopdf`:
@@ -45,9 +46,9 @@ pip install --user pdftowrite
 
 You need to manually install the packages. e.g.:
 
-- Debian/Ubuntu: `sudo apt install poppler-utils inkscape gzip wkhtmltopdf pdftk`
-- Fedora: `sudo dnf install poppler inkscape gzip wkhtmltopdf pdftk`
-- Arch: `sudo pacman -S poppler inkscape gzip wkhtmltopdf pdftk`
+- Debian/Ubuntu: `sudo apt install poppler-utils inkscape imagemagick gzip wkhtmltopdf pdftk`
+- Fedora: `sudo dnf install poppler inkscape ImageMagick gzip wkhtmltopdf pdftk`
+- Arch: `sudo pacman -S poppler inkscape imagemagick gzip wkhtmltopdf pdftk`
 
 ## Example
 
