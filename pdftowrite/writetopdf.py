@@ -1,4 +1,4 @@
-import argparse, tempfile, shutil, subprocess, asyncio, sys
+import argparse, tempfile, shutil, subprocess, asyncio, sys, os
 from pathlib import Path
 import pdftowrite.utils as utils
 import pdftowrite.docs
@@ -38,18 +38,17 @@ def process_page(page: Page, output_dir: str, ns: argparse.Namespace) -> str:
         raise Exception(f'Percentage(%) is not supported for page size')
 
     page.viewbox = f'0 0 {page.width} {page.height}'
+    page.x = 0
+    page.x_unit = 'px'
+    page.y = 0
+    page.y_unit = 'px'
     page.width = utils.px(page.width_full) * ns.scale
     page.width_unit = 'px'
     page.height = utils.px(page.height_full) * ns.scale
     page.height_unit = 'px'
 
-    # 1 margin to prevent blank page at the end
-    page.x = 1
-    page.x_unit = 'px'
-    page.y = 1
-    page.y_unit = 'px'
-    width = f'{page.width + 2}{page.width_unit}'
-    height = f'{page.height + 2}{page.height_unit}'
+    width = f'{page.width}{page.width_unit}'
+    height = f'{page.height}{page.height_unit}'
 
     page.width *= WK_SCALE
     page.height *= WK_SCALE
@@ -64,6 +63,7 @@ def process_page(page: Page, output_dir: str, ns: argparse.Namespace) -> str:
 
     filename = str(Path(output_dir) / f'page-{page.page_num}.svg')
     output = str(Path(output_dir) / f'page-{page.page_num}.pdf')
+    page_output = str(Path(output_dir) / f'page-{page.page_num}-1.pdf')
 
     with open(filename, 'w') as f:
         f.write(page.svg)
@@ -73,7 +73,15 @@ def process_page(page: Page, output_dir: str, ns: argparse.Namespace) -> str:
             '-T', '0', '-R', '0', '-B', '0', '-L', '0',
             filename, output
         ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    return output
+
+    if utils.cmd_exists(['pdftk', '--help']):
+        subprocess.check_call(['pdftk', output, 'cat', '1', 'output', page_output])
+    else:
+        page_output_pattern = str(Path(output_dir) / f'page-{page.page_num}-%d.pdf')
+        subprocess.check_call(['pdfseparate', '-f', '1', '-l', '1', output, page_output_pattern])
+    os.remove(filename)
+    os.remove(output)
+    return page_output
 
 async def generate_pdf(doc: Document, output: str, ns: argparse.Namespace) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
