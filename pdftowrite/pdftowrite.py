@@ -42,6 +42,8 @@ def arg_parser():
     parser.add_argument('-v', '--version', action='version', version=__version__)
     parser.add_argument('-o', '--output', action='store', type=str, default='',
                         help='Specify output filename')
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='Overwrite existing files without asking')
     parser.add_argument('-m', '--mode', type=Mode, default=Mode.MIXED, choices=list(Mode),
                         help='Specify render mode (default: mixed)')
     parser.add_argument('-C', '--no-compat-mode', action='store_true',
@@ -162,15 +164,15 @@ def run(args):
     suffix = '.svg' if ns.nozip else '.svgz'
     output = ns.output if ns.output else str(Path(filename).with_suffix(suffix))
     tmp_output = output if ns.nozip else output + '.tmp'
-    if Path(tmp_output).exists():
+    if not ns.force and Path(tmp_output).exists():
         if not utils.query_yn(f'Overwrite?: {tmp_output}'): return
     with open(tmp_output, 'w') as f:
         f.write(doc)
     if not ns.nozip:
-        if Path(tmp_output + '.gz').exists():
+        if not ns.force and Path(tmp_output + '.gz').exists():
             if not utils.query_yn(f'Overwrite?: {tmp_output}.gz'): return
         subprocess.check_call(['gzip', '-f', tmp_output])
-        if Path(output).exists():
+        if not ns.force and Path(output).exists():
             if not utils.query_yn(f'Overwrite?: {output}'): return
         with contextlib.suppress(FileNotFoundError):
             os.remove(output)

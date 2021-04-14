@@ -14,6 +14,8 @@ def arg_parser():
     parser.add_argument('-v', '--version', action='version', version=__version__)
     parser.add_argument('-o', '--output', action='store', type=str, default='',
                         help='Specify output filename')
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='Overwrite existing files without asking')
     parser.add_argument('-g', '--pages', action='store', type=str, default='all',
                         help='Specify pages to convert (e.g. "1 2 3", "1-3") (default: all)')
     parser.add_argument('-s', '--scale', action='store', type=float, default=1.0,
@@ -108,7 +110,7 @@ def run(args):
     doc = Document(svg, page_nums)
     output = ns.output if ns.output else str(Path(filename).with_suffix('.pdf'))
 
-    if Path(output).exists():
+    if not ns.force and Path(output).exists():
         if not utils.query_yn(f'Overwrite?: {output}'): return
 
     loop = asyncio.get_event_loop()
