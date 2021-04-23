@@ -284,7 +284,10 @@ class Background(SizeBox):
         text_layer_vb = tree.getroot().get('viewBox')
         text_layer_vb_width = utils.viewbox_vals(text_layer_vb)[2]
         text_layer_vb_height = utils.viewbox_vals(text_layer_vb)[3]
+
+        self.__parent_map = { c:p for p in tree.iter() for c in p }
         group = self.__create_text_group(tree)
+        self.__parent_map = None
 
         el = ET.Element('svg')
         el.set('id', 'text-layer' + self.suffix)
@@ -317,6 +320,11 @@ class Background(SizeBox):
             for el in text.iter():
                 el.attrib.pop('id', None)
                 el.attrib.pop('clip-path', None)
+            parent_g = self.__parent_map[text]
+            if parent_g and 'transform' in parent_g.attrib and 'transform' not in text.attrib:
+                num_children = len(parent_g.findall('./{%s}text' % SVG_NS))
+                if num_children == 1:
+                    text.set('transform', parent_g.get('transform'))
             result.append(text)
         return result
 
