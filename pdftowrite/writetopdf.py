@@ -36,32 +36,28 @@ def read_svg(filename: str) -> str:
             return f.read()
 
 def process_page(page: Page, output_dir: str, ns: argparse.Namespace) -> str:
-    if page.width_unit == '%' or page.height_unit == '%':
+    if utils.unit(page.width) == '%' or utils.unit(page.height) == '%':
         raise Exception(f'Percentage(%) is not supported for page size')
 
-    page.viewbox = f'0 0 {page.width} {page.height}'
-    page.x = 0
-    page.x_unit = 'px'
-    page.y = 0
-    page.y_unit = 'px'
-    page.width = utils.px(page.width_full) * ns.scale
-    page.width_unit = 'px'
-    page.height = utils.px(page.height_full) * ns.scale
-    page.height_unit = 'px'
+    page.viewbox = f'0 0 {utils.val(page.width)} {utils.val(page.height)}'
+    page.x = '0px'
+    page.y = '0px'
+    page.width = f'{utils.px(page.width) * ns.scale}px'
+    page.height = f'{utils.px(page.height) * ns.scale}px'
 
-    width = f'{page.width}{page.width_unit}'
-    height = f'{page.height}{page.height_unit}'
+    width = page.width
+    height = page.height
 
-    page.width *= WK_SCALE
-    page.height *= WK_SCALE
+    page.width = f'{utils.val(width) * WK_SCALE}{utils.unit(width)}'
+    page.height = f'{utils.val(height) * WK_SCALE}{utils.unit(height)}'
 
     els = page.tree.getroot().findall('.//{%s}svg' % SVG_NS)
     els += utils.find_elements_by_class(page.tree, 'pagerect')
     for el in els:
         if 'width' in el.attrib:
-            el.set('width', utils.pattern_get(r'([0-9.]+)(.*?)$', el.get('width'), 1))
+            el.set( 'width', str(utils.val(el.get('width'))) )
         if 'height' in el.attrib:
-            el.set('height', utils.pattern_get(r'([0-9.]+)(.*?)$', el.get('height'), 1))
+            el.set( 'height', str(utils.val(el.get('height'))) )
 
     filename = str(Path(output_dir) / f'page-{page.page_num}.svg')
     output = str(Path(output_dir) / f'page-{page.page_num}.pdf')

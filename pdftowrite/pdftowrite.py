@@ -3,7 +3,7 @@ import argparse, asyncio, operator, contextlib
 from pathlib import Path
 from enum import Enum
 import pdftowrite.utils as utils
-from pdftowrite.docs import Page
+from pdftowrite.docs import Background
 from pdftowrite import __version__
 
 PACKAGE_DIR = Path(os.path.dirname(__file__))
@@ -74,7 +74,7 @@ def arg_parser():
                         help='Specify rule color (default: #9F0000FF)')
     return parser
 
-def process_page(filename: str, page_num: int, output_dir: str, ns: argparse.Namespace) -> Page:
+def process_page(filename: str, page_num: int, output_dir: str, ns: argparse.Namespace) -> Background:
     output = str(Path(output_dir) / f'output-{page_num}.svg')
     opts = ['--pdf-poppler'] if ns.mode is Mode.POPPLER or ns.mode is Mode.MIXED else []
     utils.inkscape_run([
@@ -101,9 +101,9 @@ def process_page(filename: str, page_num: int, output_dir: str, ns: argparse.Nam
 
     with open(output, 'r') as f:
         svg = f.read()
-        return Page(page_num, svg, text_layer_svg, not ns.no_compat_mode)
+        return Background(page_num, svg, text_layer_svg, not ns.no_compat_mode)
 
-async def convert_to_pages(filename: str, page_nums: list[int], ns: argparse.Namespace) -> list[Page]:
+async def convert_to_pages(filename: str, page_nums: list[int], ns: argparse.Namespace) -> list[Background]:
     result = []
     with tempfile.TemporaryDirectory() as tmpdir:
         loop = asyncio.get_running_loop()
@@ -114,14 +114,14 @@ async def convert_to_pages(filename: str, page_nums: list[int], ns: argparse.Nam
         result = await asyncio.gather(*tasks)
     return sorted(result, key=operator.attrgetter('page_num'))
 
-def generate_document(pages: list[Page], nodup_pages: set[int], vars: dict[str,str], ns: argparse.Namespace) -> None:
+def generate_document(pages: list[Background], nodup_pages: set[int], vars: dict[str,str], ns: argparse.Namespace) -> None:
     page_tmp = get_page_template()
     page_results = []
     for page in pages:
-        page.width = page.width * ns.scale
-        page.height = page.height * ns.scale
-        vars['width'] = page.width_full
-        vars['height'] = page.height_full
+        page.width = f'{utils.val(page.width) * ns.scale}{utils.unit(page.width)}'
+        page.height = f'{utils.val(page.height) * ns.scale}{utils.unit(page.height)}'
+        vars['width'] = page.width
+        vars['height'] = page.height
         vars['ruleline-classes'] = '' if page.page_num in nodup_pages else 'write-no-dup'
         vars['body'] = page.svg
         text = utils.apply_vars(page_tmp, vars)

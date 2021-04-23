@@ -125,3 +125,15 @@ def decode_image_uri(href: str) -> tuple[str,str,bytes]:
 def encode_image_uri(data: bytes) -> str:
     encoded = base64.b64encode(data)
     return encoded.decode('utf-8')
+
+def val(value: str) -> float:
+    return float( pattern_get(r'([0-9.]+)', value, 1) )
+
+def unit(value: str) -> str:
+    return pattern_get(r'([0-9.]+)(.*?)$', value, 2)
+
+def viewbox_vals(value: str) -> list[str]:
+    num = r'([0-9.]+\s*[a-zA-Z%]*)'
+    pattern = rf'{num}\s+{num}\s+{num}\s+{num}'
+    match = re.search(pattern, value)
+    return [ match.group(1), match.group(2), match.group(3), match.group(4) ]
