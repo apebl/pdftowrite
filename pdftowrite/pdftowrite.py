@@ -118,8 +118,10 @@ def generate_document(pages: list[Background], nodup_pages: set[int], vars: dict
     page_tmp = get_page_template()
     page_results = []
     for page in pages:
-        page.width = f'{utils.val(page.width) * ns.scale}{utils.unit(page.width)}'
-        page.height = f'{utils.val(page.height) * ns.scale}{utils.unit(page.height)}'
+        width_px = utils.px(page.width) * ns.scale
+        height_px = utils.px(page.height) * ns.scale
+        page.width = f'{width_px}px'
+        page.height = f'{height_px}px'
         vars['width'] = page.width
         vars['height'] = page.height
         vars['ruleline-classes'] = '' if page.page_num in nodup_pages else 'write-no-dup'
