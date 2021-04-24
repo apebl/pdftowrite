@@ -3,7 +3,7 @@
 ![](pdftowrite.png)
 
 A utility that converts PDF to [Stylus Labs Write](http://www.styluslabs.com/)
-document with text, and vice versa.
+document preserving text as selectable characters, and vice versa.
 
 ## How does it work
 
@@ -37,6 +37,7 @@ pip install --user pdftowrite
  * Inkscape (either native or flatpak)
  * ImageMagick
  * gzip
+ * lxml (libxml2, libxslt)
 
 `writetopdf`:
 
@@ -46,9 +47,9 @@ pip install --user pdftowrite
 
 You need to manually install the packages. e.g.:
 
-- Debian/Ubuntu: `sudo apt install poppler-utils inkscape imagemagick gzip wkhtmltopdf pdftk`
-- Fedora: `sudo dnf install poppler inkscape ImageMagick gzip wkhtmltopdf pdftk`
-- Arch: `sudo pacman -S poppler inkscape imagemagick gzip wkhtmltopdf pdftk`
+- Debian/Ubuntu: `sudo apt install poppler-utils inkscape imagemagick gzip libxml2-dev libxslt-dev wkhtmltopdf pdftk`
+- Fedora: `sudo dnf install poppler inkscape ImageMagick gzip libxml2-devel libxslt-devel wkhtmltopdf pdftk`
+- Arch: `sudo pacman -S poppler inkscape imagemagick gzip libxslt wkhtmltopdf pdftk`
 
 ## Example
 
