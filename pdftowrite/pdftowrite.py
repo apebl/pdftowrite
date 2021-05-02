@@ -117,6 +117,7 @@ async def convert_to_pages(filename: str, page_nums: list[int], ns: argparse.Nam
 def generate_document(pages: list[Background], nodup_pages: set[int], vars: dict[str,str], ns: argparse.Namespace) -> None:
     page_tmp = get_page_template()
     page_results = []
+    ruleline_attribs = vars['ruleline-attribs']
     for page in pages:
         width_px = utils.px(page.width) * ns.scale
         height_px = utils.px(page.height) * ns.scale
@@ -124,7 +125,8 @@ def generate_document(pages: list[Background], nodup_pages: set[int], vars: dict
         page.height = f'{height_px}px'
         vars['width'] = page.width
         vars['height'] = page.height
-        vars['ruleline-classes'] = '' if page.page_num in nodup_pages else 'write-no-dup'
+        vars['ruleline-classes'] = 'write-no-dup' if page.page_num in nodup_pages else ''
+        vars['ruleline-attribs'] = ruleline_attribs + f' data-pdf-page="{page.page_num}"'
         vars['body'] = page.svg
         text = utils.apply_vars(page_tmp, vars)
         page_results.append(text)
@@ -147,6 +149,7 @@ def run(args):
         'papercolor': ns.papercolor,
         'rulecolor': ns.rulecolor,
         'ruleline-classes': '',
+        'ruleline-attribs': f'data-pdf-file="{filename}"',
         'body': ''
     }
 
