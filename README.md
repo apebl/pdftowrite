@@ -1,27 +1,48 @@
-# pdftowrite: PDF <-> Write with text
+# pdftowrite: Annotate PDFs with Stylus Labs Write
 
 ![](pdftowrite.png)
 
 A utility that converts PDF to [Stylus Labs Write](http://www.styluslabs.com/)
-document preserving text as selectable characters, and vice versa.
+document, and vice versa.
 
-## How does it work
+## Annotate PDFs
 
-`pdftowrite` converts PDF pages to SVG paths, adds an invisible but selectable
-text layer to each page, and merges them into a Write document.
+There are two ways to annotate PDFs.
 
-`writetopdf` converts a Write document to a PDF.
+### A. Convert PDF -> SVG -> PDF (literally)
 
-### Why do I need `writetopdf`? Write itself can export PDF
+1. `pdftowrite example.pdf`: Convert *.pdf to *.svgz
+2. (Open `example.svgz` with Stylus Labs Write and write your notes)
+3. `writetopdf example.svgz -o example-annot.pdf`: Convert *.svgz to *.pdf
 
-The PDF exporter of Write does not support some features (e.g. Unicode text,
-multi-coords tspans, etc.), but `writetopdf` does.
+`pdftowrite` converts PDF pages to SVG paths with invisible but selectable text
+layers, so you can preserve text as selectable characters.
 
-### If I convert PDF -> Write -> PDF, Is the latter PDF is 100% the same as the former?
+You should use `writetopdf` instead of Write's PDF exporter which does not
+support some features (e.g. Unicode text, multi-coords tspans, etc.).
 
-No, the program does not guarantee it. `pdftowrite` converts PDF pages to SVG
-paths, so original text elements are deleted. Instead, a text layer is added to
-the page as mentioned earlier.
+The result PDF (excluding annotations) is, however, not 100% the same as the
+original PDF. This is because:
+
+- PDF and SVG are not 100% compatible
+- Write does not support entire SVG spec, so some modifications are required for compatibility with Write
+- Original text elements are deleted. Instead, a text layer is added to the page as mentioned earlier
+
+### B. Annotation mode
+
+1. `pdftowrite example.pdf`: Convert *.pdf to *.svgz
+2. (Open `example.svgz` with Stylus Labs Write and write your notes)
+3. `writetopdf --annot example.svgz -o example-annot.pdf`: New PDF = Original PDF + Annotations
+
+You can see that `--annot` option is added in *3*. If the option is added,
+`writetopdf` creates a new PDF by overlaying annotations on top of the original
+PDF pages. This is similar to Xournal's method.
+
+You can annotate different PDF file with `--pdf-file FILE` option. e.g.:
+
+```
+writetopdf --annot --pdf-file example2.pdf example.svgz -o example2-annot.pdf
+```
 
 ## Install
 
@@ -33,42 +54,33 @@ pip install --user pdftowrite
 
 `pdftowrite`:
 
- * Poppler
+ * Poppler (`pdfinfo`)
  * Inkscape (either native or flatpak)
- * ImageMagick
+ * ImageMagick (`convert`)
  * gzip
  * lxml (libxml2, libxslt)
 
 `writetopdf`:
 
  * wkhtmltopdf
- * PDFtk(pdftk-java) or Poppler
+ * PDFtk(pdftk-java)
+ * librsvg (`rsvg-convert`)
  * gzip
 
 You need to manually install the packages. e.g.:
 
-- Debian/Ubuntu: `sudo apt install poppler-utils inkscape imagemagick gzip libxml2-dev libxslt-dev wkhtmltopdf pdftk`
-- Fedora: `sudo dnf install poppler inkscape ImageMagick gzip libxml2-devel libxslt-devel wkhtmltopdf pdftk`
-- Arch: `sudo pacman -S poppler inkscape imagemagick gzip libxslt wkhtmltopdf pdftk`
-
-## Example
-
-```
-pdftowrite example.pdf
-```
-
-```
-writetopdf example.svgz
-```
+- Debian/Ubuntu: `sudo apt install poppler-utils inkscape imagemagick gzip libxml2-dev libxslt-dev wkhtmltopdf pdftk librsvg2-bin`
+- Fedora: `sudo dnf install poppler inkscape ImageMagick gzip libxml2-devel libxslt-devel wkhtmltopdf pdftk librsvg2-tools`
+- Arch: `sudo pacman -S poppler inkscape imagemagick gzip libxslt wkhtmltopdf pdftk librsvg`
 
 ## Usage
 
 ### pdftowrite
 
 ```
-usage: pdftowrite [-h] [-v] [-o OUTPUT] [-m {mixed,poppler,inkscape}] [-C]
-                  [-d DPI] [-g PAGES] [-u NODUP_PAGES] [-Z] [-s SCALE] [-x X]
-                  [-y Y] [-X XRULING] [-Y YRULING] [-l MARGIN_LEFT]
+usage: pdftowrite [-h] [-v] [-o OUTPUT] [-f] [-m {mixed,poppler,inkscape}]
+                  [-C] [-d DPI] [-g PAGES] [-u NODUP_PAGES] [-Z] [-s SCALE]
+                  [-x X] [-y Y] [-X XRULING] [-Y YRULING] [-l MARGIN_LEFT]
                   [-p PAPERCOLOR] [-r RULECOLOR]
                   FILE
 
@@ -82,6 +94,7 @@ optional arguments:
   -v, --version         show program's version number and exit
   -o OUTPUT, --output OUTPUT
                         Specify output filename
+  -f, --force           Overwrite existing files without asking
   -m {mixed,poppler,inkscape}, --mode {mixed,poppler,inkscape}
                         Specify render mode (default: mixed)
   -C, --no-compat-mode  Turn off Write compatibility mode
@@ -115,7 +128,9 @@ optional arguments:
 ### writetopdf
 
 ```
-usage: writetopdf [-h] [-v] [-o OUTPUT] [-g PAGES] [-s SCALE] FILE
+usage: writetopdf [-h] [-v] [--annot] [--pdf-file PDF_FILE] [-o OUTPUT] [-f]
+                  [-g PAGES] [-s SCALE]
+                  FILE
 
 Convert Stylus Labs Write document to PDF
 
@@ -125,8 +140,11 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -v, --version         show program's version number and exit
+  --annot               Use annotation mode
+  --pdf-file PDF_FILE   Specify the PDF file to be annotated
   -o OUTPUT, --output OUTPUT
                         Specify output filename
+  -f, --force           Overwrite existing files without asking
   -g PAGES, --pages PAGES
                         Specify pages to convert (e.g. "1 2 3", "1-3")
                         (default: all)
