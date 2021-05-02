@@ -68,6 +68,7 @@ class Background(SizeBox):
         self.page_num = page_num
         self.suffix = '-' + shortuuid.uuid()[:7] + '-p' + str(self.page_num)
         self.__process_svg(svg, text_layer_svg, compat_mode, uniquify)
+        self.tree.getroot().set('class', self.tree.getroot().get('class', '') + ' page-background')
 
     @property
     def size_element(self) -> ET.Element:
