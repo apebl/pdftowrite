@@ -12,6 +12,10 @@ def arg_parser():
     parser.add_argument('file', metavar='FILE', type=str, nargs=1,
                         help='A Write document')
     parser.add_argument('-v', '--version', action='version', version=__version__)
+    parser.add_argument('--annot', action='store_true',
+                        help='Use annotation mode')
+    parser.add_argument('--pdf-file', action='store', type=str, default=None,
+                        help='Specify the PDF file to be annotated')
     parser.add_argument('-o', '--output', action='store', type=str, default='',
                         help='Specify output filename')
     parser.add_argument('-f', '--force', action='store_true',
@@ -35,21 +39,52 @@ def read_svg(filename: str) -> str:
         with open(filename, 'r') as f:
             return f.read()
 
+def get_pdf_file(page: Page, ns: argparse.Namespace) -> str:
+    if ns.pdf_file:
+        if not Path(ns.pdf_file).exists():
+            raise f'PDF file \'{ns.annot}\' not found'
+        return ns.pdf_file
+    elif page.pdf_file:
+        if not Path(page.pdf_file).exists():
+            raise f'page #{page.page_num}: PDF file \'{page.pdf_file}\' not found'
+        return page.pdf_file
+    else:
+        raise f'page #{page.page_num}: PDF file not specified'
+
+def get_pdf_pagenum(page: Page) -> int:
+    pdf_pagenum = page.pdf_page
+    if pdf_pagenum:
+        return pdf_pagenum
+    else:
+        return page.page_num
+
 def process_page(page: Page, output_dir: str, ns: argparse.Namespace) -> str:
     if utils.unit(page.width) == '%' or utils.unit(page.height) == '%':
         raise Exception(f'Percentage(%) is not supported for page size')
 
+    if ns.annot:
+        pdf_file = get_pdf_file(page, ns)
+        pdf_page_num = get_pdf_pagenum(page)
+        width, height = utils.pdf_page_size(pdf_file, pdf_page_num)
+        scale = 1.0
+        page.remove_ruleline()
+    else:
+        width = page.width
+        height = page.height
+        scale = ns.scale
+
     page.viewbox = f'0 0 {utils.val(page.width)} {utils.val(page.height)}'
     page.x = '0px'
     page.y = '0px'
-    page.width = f'{utils.px(page.width) * ns.scale}px'
-    page.height = f'{utils.px(page.height) * ns.scale}px'
+    page.width = f'{utils.px(width) * scale}px'
+    page.height = f'{utils.px(height) * scale}px'
 
     width = page.width
     height = page.height
 
-    page.width = f'{utils.val(width) * WK_SCALE}{utils.unit(width)}'
-    page.height = f'{utils.val(height) * WK_SCALE}{utils.unit(height)}'
+    if not ns.annot:
+        page.width = f'{utils.val(width) * WK_SCALE}{utils.unit(width)}'
+        page.height = f'{utils.val(height) * WK_SCALE}{utils.unit(height)}'
 
     els = page.tree.getroot().findall('.//{%s}svg' % SVG_NS)
     els += utils.find_elements_by_class(page.tree, 'pagerect')
@@ -66,20 +101,38 @@ def process_page(page: Page, output_dir: str, ns: argparse.Namespace) -> str:
     with open(filename, 'w') as f:
         f.write(page.svg)
 
-    subprocess.check_call(['wkhtmltopdf',
-            '--page-width', f'{width}', '--page-height', f'{height}',
-            '-T', '0', '-R', '0', '-B', '0', '-L', '0',
-            filename, output
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    if utils.cmd_exists(['pdftk', '--help']):
-        subprocess.check_call(['pdftk', output, 'cat', '1', 'output', page_output])
+    if ns.annot:
+        subprocess.check_call(['rsvg-convert',
+                '-f', 'pdf',
+                '-o', page_output,
+                filename
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     else:
-        page_output_pattern = str(Path(output_dir) / f'page-{page.page_num}-%d.pdf')
-        subprocess.check_call(['pdfseparate', '-f', '1', '-l', '1', output, page_output_pattern])
+        subprocess.check_call(['wkhtmltopdf',
+                '--page-width', f'{width}', '--page-height', f'{height}',
+                '-T', '0', '-R', '0', '-B', '0', '-L', '0',
+                '--no-background',
+                filename, output
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if utils.cmd_exists(['pdftk', '--help']):
+            subprocess.check_call(['pdftk', output, 'cat', '1', 'output', page_output])
+        else:
+            page_output_pattern = str(Path(output_dir) / f'page-{page.page_num}-%d.pdf')
+            subprocess.check_call(['pdfseparate', '-f', '1', '-l', '1', output, page_output_pattern])
+        os.remove(output)
     os.remove(filename)
-    os.remove(output)
-    return page_output
+
+    if ns.annot:
+        pdf_page_output = str(Path(output_dir) / f'page-{page.page_num}-pdf.pdf')
+        subprocess.check_call(['pdftk', pdf_file, 'cat', str(pdf_page_num), 'output', pdf_page_output])
+
+        annot_output = str(Path(output_dir) / f'page-{page.page_num}-annot.pdf')
+        subprocess.check_call(['pdftk', pdf_page_output, 'stamp', page_output, 'output', annot_output])
+        os.remove(page_output)
+        os.remove(pdf_page_output)
+        return annot_output
+    else:
+        return page_output
 
 async def generate_pdf(doc: Document, output: str, ns: argparse.Namespace) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:

@@ -357,6 +357,31 @@ class Page(SizeBox):
         else:
             return None
 
+    @property
+    def write_content(self) -> ET.Element:
+        return utils.find_elements_by_class(self.tree, 'write-content')[0]
+
+    @property
+    def ruleline(self) -> ET.Element:
+        return utils.find_elements_by_class(self.tree, 'ruleline')[0]
+
+    def remove_ruleline(self) -> None:
+        write_content = self.write_content
+        ruleline = self.ruleline
+        write_content.remove(ruleline)
+
+    @property
+    def pdf_file(self) -> Optional[str]:
+        return self.ruleline.get('data-pdf-file', None)
+
+    @property
+    def pdf_page(self) -> Optional[int]:
+        ruleline = self.ruleline
+        if 'data-pdf-file' in ruleline.attrib:
+            return int( ruleline.get('data-pdf-page') )
+        else:
+            return None
+
     def __process_svg(self, svg) -> None:
         svg = re.sub(r'<\?xml[^(\?>)]*\?>', '', svg)
         self.tree = ET.ElementTree( ET.fromstring(svg) )

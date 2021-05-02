@@ -1,6 +1,7 @@
-import subprocess, re, sys, base64
+import subprocess, re, sys, base64, tempfile
 from subprocess import DEVNULL
 from typing import Optional, Any
+from pathlib import Path
 import xml.etree.ElementTree as ET
 
 def query_yn(question: str) -> bool:
@@ -49,6 +50,17 @@ def number_of_pages(filename: str) -> int:
     res = subprocess.check_output(['pdfinfo', filename]).decode(sys.stdout.encoding)
     match = re.search(r'^\s*Pages:\s*(\d+)', res, flags=re.MULTILINE)
     return int(match.group(1))
+
+def pdf_page_size(filename: str, page: int) -> tuple[str,str]:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dest = str(Path(tmpdir) / 'page.pdf')
+        cmd = ['pdftk', filename, 'cat', str(page), 'output', dest]
+        subprocess.check_call(cmd, stdout=DEVNULL, stderr=DEVNULL)
+        res = subprocess.check_output(['pdfinfo', dest]).decode(sys.stdout.encoding)
+    match = re.search(r'^\s*Page\s+size:\s*(\d+)\s*x\s*(\d+)', res, flags=re.MULTILINE)
+    width = int( match.group(1) )
+    height = int( match.group(2) )
+    return f'{width}pt', f'{height}pt'
 
 def parse_range(text: str, num_pages: int) -> set[int]:
     tokens: list[str] = text.split()
