@@ -79,7 +79,7 @@ def process_page(filename: str, page_num: int, output_dir: str, ns: argparse.Nam
     opts = ['--pdf-poppler'] if ns.mode is Mode.POPPLER or ns.mode is Mode.MIXED else []
     utils.inkscape_run([
         *opts,
-        f'--pdf-page={page_num}',
+        f'--pages={page_num}',
         f'--export-dpi={ns.dpi}',
         '--export-plain-svg',
         '-o', output,
@@ -90,7 +90,7 @@ def process_page(filename: str, page_num: int, output_dir: str, ns: argparse.Nam
     if ns.mode is Mode.MIXED:
         text_layer_output = str(Path(output_dir) / f'output-{page_num}-text.svg')
         utils.inkscape_run([
-            f'--pdf-page={page_num}',
+            f'--pages={page_num}',
             f'--export-dpi={ns.dpi}',
             '--export-plain-svg',
             '-o', text_layer_output,
