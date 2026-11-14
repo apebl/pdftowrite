@@ -162,9 +162,7 @@ def run(args):
     if not ns.force and Path(output).exists():
         if not utils.query_yn(f'Overwrite?: {output}'): return
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete( generate_pdf(doc, output, ns) )
-    loop.close()
+    asyncio.run( generate_pdf(doc, output, ns) )
 
 def main():
     run(sys.argv[1:])
