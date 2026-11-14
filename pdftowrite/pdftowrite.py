@@ -79,7 +79,7 @@ def process_page(filename: str, page_num: int, output_dir: str, ns: argparse.Nam
     opts = ['--pdf-poppler'] if ns.mode is Mode.POPPLER or ns.mode is Mode.MIXED else []
     utils.inkscape_run([
         *opts,
-        f'--pdf-page={page_num}',
+        f'--pages={page_num}',
         f'--export-dpi={ns.dpi}',
         '--export-plain-svg',
         '-o', output,
@@ -90,7 +90,7 @@ def process_page(filename: str, page_num: int, output_dir: str, ns: argparse.Nam
     if ns.mode is Mode.MIXED:
         text_layer_output = str(Path(output_dir) / f'output-{page_num}-text.svg')
         utils.inkscape_run([
-            f'--pdf-page={page_num}',
+            f'--pages={page_num}',
             f'--export-dpi={ns.dpi}',
             '--export-plain-svg',
             '-o', text_layer_output,
@@ -160,9 +160,7 @@ def run(args):
     page_nums = sorted( utils.parse_range(ns.pages, num_pages) )
     nodup_page_nums = utils.parse_range(ns.nodup_pages, num_pages)
 
-    loop = asyncio.get_event_loop()
-    pages = loop.run_until_complete( convert_to_pages(filename, page_nums, ns) )
-    loop.close()
+    pages = asyncio.run( convert_to_pages(filename, page_nums, ns) )
 
     doc = generate_document(pages, nodup_page_nums, vars, ns)
 
